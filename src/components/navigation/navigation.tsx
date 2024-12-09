@@ -1,17 +1,52 @@
-import React, { FC } from "react";
+import React, { useState } from "react";
 import Box from "@mui/material/Box";
 import { navigations } from "./navigation.data";
-import { Link } from "@mui/material";
+import { Link, Menu, MenuItem } from "@mui/material";
 import { useLocation } from "react-router-dom";
+import { useMetamask } from "../../hooks";
 
 type NavigationData = {
   path: string;
   label: string;
 };
 
-const Navigation: FC = () => {
+const Navigation: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+
+  const { account, connectWallet, setAccount, setProvider, setNetwork, setErrorMessage } =
+    useMetamask();
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleCopyAddress = async () => {
+    if (account) {
+      await navigator.clipboard.writeText(account);
+    }
+    handleMenuClose();
+  };
+
+  const handleDisconnect = () => {
+    setAccount(null);
+    setProvider(null);
+    setNetwork(null);
+    setErrorMessage(null);
+
+    handleMenuClose();
+  };
+
+  const handleReconnect = () => {
+    handleMenuClose();
+    connectWallet();
+  };
 
   return (
     <Box
@@ -19,10 +54,10 @@ const Navigation: FC = () => {
         display: "flex",
         flexFlow: "wrap",
         justifyContent: "end",
-        flexDirection: { xs: "column", lg: "row" }
+        flexDirection: { xs: "column", lg: "row" },
       }}
     >
-      {navigations.map(({ path: destination, label }: NavigationData) =>
+      {navigations.map(({ path: destination, label }: NavigationData) => (
         <Box
           key={label}
           component={Link}
@@ -30,7 +65,7 @@ const Navigation: FC = () => {
           sx={{
             display: "inline-flex",
             position: "relative",
-            color: currentPath === destination ? "" : "white",
+            color: currentPath === destination ? "primary.main" : "white",
             lineHeight: "30px",
             letterSpacing: "3px",
             cursor: "pointer",
@@ -42,34 +77,17 @@ const Navigation: FC = () => {
             px: { xs: 0, lg: 3 },
             mb: { xs: 3, lg: 0 },
             fontSize: "20px",
-            ...destination === "/" && { color: "primary.main" },
-            "& > div": { display: "none" },
-            "&.current>div": { display: "block" },
-            "&:hover": {
-              color: "text.disabled"
-            }
+            "&:hover": { color: "text.disabled" },
           }}
         >
-          <Box
-            sx={{
-              position: "absolute",
-              top: 12,
-              transform: "rotate(3deg)",
-              "& img": { width: 44, height: "auto" }
-            }}
-          >
-            {/* eslint-disable-next-line */}
-            <img src="/images/headline-curve.svg" alt="Headline curve" />
-          </Box>
           {label}
         </Box>
-      )}
+      ))}
       <Box
         sx={{
           position: "relative",
           color: "white",
           cursor: "pointer",
-          textDecoration: "none",
           textTransform: "uppercase",
           fontWeight: 600,
           display: "inline-flex",
@@ -82,11 +100,30 @@ const Navigation: FC = () => {
           width: "324px",
           height: "45px",
           borderRadius: "6px",
-          backgroundColor: "#00dbe3"
+          backgroundColor: account ? "#A5CC82" : "#00dbe3",
+        }}
+        onClick={account ? handleMenuOpen : connectWallet}
+      >
+        {account ? `${account.substring(0, 6)}...` : "Connect Wallet"}
+      </Box>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
         }}
       >
-        Connect Wallet
-      </Box>
+        <MenuItem onClick={handleCopyAddress}>Copy Address</MenuItem>
+        <MenuItem onClick={handleReconnect}>Reconnect</MenuItem>
+        <MenuItem onClick={handleDisconnect}>Disconnect</MenuItem>
+      </Menu>
     </Box>
   );
 };
